@@ -1,0 +1,130 @@
+
+```{r, include = FALSE}
+install.packages("xgboost")
+install.packages("usemodels")
+```
+
+
+```{r, include=FALSE}
+library(titanic)
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(mice)
+library(VIM)
+library(ranger)
+library(randomForest)
+library(RColorBrewer)
+library(rpart)
+library(rattle)
+library(e1071)
+library(xgboost)
+library(usemodels)
+
+```
+
+```{r}
+student <- read.csv("ames_student.csv")
+competition <- read_csv("ames_competition.csv")
+
+student <- student %>% mutate_if(is.character,as_factor)
+```
+
+```{r}
+student1 <- student %>% select(c("Gr_Liv_Area","Year_Built","Full_Bath",
+                                 "Garage_Area","Garage_Cars",
+                                 "Total_Bsmt_SF","First_Flr_SF",
+                                 "Year_Remod_Add","Second_Flr_SF","Above_Median"))
+
+```
+
+```{r}
+set.seed(123)
+student1_split = initial_split(student1, prop = 0.7, strata = Above_Median)
+train1 = training(student1_split)
+test1 = testing(student1_split)
+
+```
+
+```{r}
+set.seed(123)
+folds = vfold_cv(train1, v = 5)
+```
+
+
+
+
+```{r}
+use_xgboost(Above_Median ~., train1)
+```
+
+```{r}
+start_time = Sys.time()
+
+tgrid = expand.grid(
+  trees = 100,  
+  min_n = 1, 
+  tree_depth = c(1,2,3,4),  
+  learn_rate = c(0.01, 0.1, 0.2, 0.3),  
+  loss_reduction = 0,  
+  sample_size = c(0.8, 1))
+
+xgboost_recipe <- 
+  recipe(formula = Above_Median ~ ., data = train1) %>% 
+  step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
+  step_zv(all_predictors())
+
+xgboost_spec <- 
+  boost_tree(trees = tune(), min_n = tune(), tree_depth = tune(), learn_rate = tune(), 
+    loss_reduction = tune(), sample_size = tune()) %>% 
+  set_mode("classification") %>% 
+  set_engine("xgboost") 
+
+xgboost_workflow <- 
+  workflow() %>% 
+  add_recipe(xgboost_recipe) %>% 
+  add_model(xgboost_spec)
+
+set.seed(70799)
+xgboost_tune2 <-
+  tune_grid(xgboost_workflow, resamples = folds, grid = tgrid)
+
+end_time = Sys.time()
+end_time-start_time
+```
+```{r}
+best_xgb = select_best(xgboost_tune2, "accuracy")
+
+final_xgb = finalize_workflow(
+  xgboost_workflow,
+  best_xgb
+)
+
+final_xgb_fit = fit(final_xgb, train1)
+```
+
+```{r}
+trainpredxgb = predict(final_xgb_fit, train1)
+head(trainpredxgb)
+```
+
+```{r}
+confusionMatrix(trainpredxgb$.pred_class, train1$Above_Median, 
+                positive = "Yes")
+```
+
+```{r}
+testpredxgb = predict(final_xgb_fit, test1)
+```
+
+```{r}
+confusionMatrix(testpredxgb$.pred_class, test1$Above_Median, 
+                positive = "Yes")
+```
+
+```{r}
+comppredxgb = predict(final_xgb_fit, competition)
+head(comppredxgb)
+
+```
+

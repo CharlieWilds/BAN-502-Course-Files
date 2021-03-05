@@ -1,0 +1,33 @@
+```{r}
+# install.packages("VIM")
+# install.packages("mice")
+# install.packages("naniar")
+
+library(tidyverse)
+library(VIM)
+library(mice)
+library(naniar)
+```
+
+```{r}
+grades <- read_csv("class-grades.csv")
+```
+
+```{r}
+gg_miss_var(grades)
+vim_plot = aggr(grades, numbers = TRUE, prop = c(TRUE, FALSE),cex.axis=.7)
+vis_miss(grades)
+```
+
+```{r}
+grades_row = grades %>% drop_na()
+nrow(grades_2)
+
+set.seed(123) 
+grades_4 = mice(grades, m=5, method='pmm', printFlag=FALSE)
+summary(grades_4)
+
+grades_complete = complete(grades_3) 
+summary(grades_complete)
+```
+

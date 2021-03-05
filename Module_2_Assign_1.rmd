@@ -1,0 +1,135 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Charlie Wilds
+## BAN 502
+## Module 2 Assignment 1
+
+
+```{r}
+# install.packages("tidymodels")
+```
+
+```{r}
+# install.packages("GGally")
+```
+```{r}
+# install.packages("lmtest")
+```
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(GGally)
+library(lmtest)
+```
+```{r}
+# Task 1
+air = airquality
+```
+
+```{r}
+# Task 2
+str(air)
+summary(air)
+```
+
+There are 6 variables and 153 observations in the "air" data set. There is missing data in multiple within multiple variables, and the most likely response variable is "Ozone".
+
+```{r}
+# Task 2
+air2 = drop_na(air)
+str(air2)
+```
+The "air2" data set contains 111 rows and 6 columns. The drop_na function deleted 42 rows.
+
+```{r}
+# Task 3
+ggpairs(air2)
+ggcorr(air2, label=TRUE)
+```
+"Temp" is most strongly correlated with "Ozone".
+"Day" is least strongly correlated with "Ozone".
+
+```{r}
+# Task 4
+ggplot(data=air2, aes(x=Temp, y=Ozone)) +
+  geom_point()
+```
+
+There is a moderate positive correlation between Temp and Ozone.
+
+```{r}
+# Task 5 Part 1
+air2_simp = recipe(Ozone ~ Temp, air2)
+air2_simp
+```
+```{r}
+# Task 5 Part 2
+lm_model = 
+  linear_reg() %>%
+  set_engine("lm")
+```
+
+```{r}
+# Task 5 Part 3
+lm_wflow =
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(air2_simp)
+```
+
+```{r}
+# Task 5 Part 4
+lm_fit = fit(lm_wflow, air2)
+```
+
+```{r}
+# Task 5 Part 5
+confint(lm_fit$fit$fit$fit)
+summary(lm_fit$fit$fit$fit)
+```
+The Temp variable was highly significant in predicting the Ozone variable, but there was a just a moderately high R-squared value (.4833) so this model is somewhat efficient but not super reliable.
+
+```{r}
+# Task 6
+ggplot(data=air2, aes(x=Temp, y=Ozone)) +
+  geom_point() +
+  geom_smooth(method="lm", se = FALSE)
+
+```
+
+```{r}
+testdata = data.frame(Temp = 80)
+predict(lm_fit, new_data = testdata)
+```
+The prediction for the Ozone variable while the Temp variable = 80 is 47.48.
+
+### Assumption 1
+Our model shows that there is somewhat of a linear relationship between the Ozone and Temp variables, but, that there is a non-linear presence as well.
+
+### Assumption 2
+```{r}
+dwtest(lm_fit$fit$fit$fit)
+```
+The p-value is greater than .05, which indicates that the residuals are most likely independent.
+
+### Assumption 3
+```{r}
+air2 = air2 %>% mutate(resid1 = lm_fit$fit$fit$fit$residuals)
+ggplot(air2,aes(x=Temp, y=resid1)) +
+  geom_point() +
+  theme_bw()
+```
+
+The plot shows that there is non-linear effect in our model.
+
+### Assumption 4
+```{r}
+ggplot(air2,aes(x=resid1)) +
+  geom_histogram() +
+  theme_bw()
+```
+
+The histogram of our model's residuals is somewhat normal.

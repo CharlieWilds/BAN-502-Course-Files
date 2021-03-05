@@ -1,0 +1,70 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Charlie Wilds
+## BAN 502
+## Module 1 Assignment 3
+
+```{r}
+# install.packages("tidyverse")
+```
+
+
+```{r}
+# Task 1
+library(tidyverse)
+
+# Task 2
+diamonddata = diamonds
+
+nrow(diamonds)
+ncol(diamonds)
+
+# Task 3
+ggplot(data=diamonds, aes(x=carat,y=price)) +
+  geom_point()
+
+# The carat and price variables have a very strong positive correlation.
+
+# Task 4
+ggplot(data=diamonds, aes(x=carat,y=price, color=cut)) +
+  geom_point()
+
+# As previously stated, there is a strong positive correlation between carat and price. There is also a positive correlation between cut and price. There does not seem to be any significant correlation between carat and cut.
+
+# Task 5
+ggplot(data=diamonds, aes(x=carat,y=price, color=cut)) +
+  geom_point() +
+  facet_wrap( ~ color)
+
+# The color variable seems to have a positive correlation with the price variable. It does not seem to have a significant correlation with carat or cut.
+
+# Task 6
+inventory <- read_csv("InventoryData.csv")
+
+dim(inventoryA)
+summary(inventoryA)
+
+# Task 7
+inventoryA <- filter(inventory, Supplier == "A")
+nrow(inventoryA)
+
+# Task 8
+inventoryA =mutate(inventoryA, OnHandRatio =`On Hand`/`Annual Demand`)
+
+# This command created a new column in the inventoryA data set which divides the "on hand variable by the "annual demand" variable.
+
+# Task 9
+avg_cost <- inventoryA %>%
+  group_by(`Item SKU`) %>%
+  summarize(SKUAvgCost = mean(`Cost per Unit ($)`))
+
+# Task 10
+# My last course in this program was MIS 503 where are these topics were at the very least mentioned. The summarize command was not focused on very much,and that is the one topic between this exercise and the datacamp exercises that I found to be most challenging.
+```
+
+
+
+

@@ -1,0 +1,247 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+# install.packages("caret")
+# install.packages("rpart")
+# install.packages("rattle")
+# install.packages("RColorBrewer")
+```
+
+```{r,include = FALSE}
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(RColorBrewer)
+```
+
+```{r}
+parole<- read_csv("parole (1).csv")
+
+parole = parole %>% mutate(male = as_factor(male)) %>%
+  mutate(male = fct_recode(male, "male" = "1", "female" = "0"))
+parole = parole %>% mutate(race = as_factor(race)) %>%
+  mutate(race = fct_recode(race, "white" = "1", "other" = "2"))
+parole = parole %>% mutate(state = as_factor(state)) %>%
+  mutate(state = fct_recode(state, "other" = "1", "Kentucky" = "2", "Louisiana" = "3", "Virginia" = "4"))
+parole = parole %>% mutate(crime = as_factor(crime)) %>%
+  mutate(crime = fct_recode(crime, "other" = "1", "larceny" = "2", "drug-related" = "3", "driving-related" = "4"))
+parole = parole %>% mutate(multiple.offenses = as_factor(multiple.offenses)) %>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "multiple" = "1", "not multiple" = "0"))
+parole = parole %>% mutate(violator = as_factor(violator)) %>%
+  mutate(violator = fct_recode(violator, "violated" = "1", "did not violate" = "0"))
+```
+
+```{r}
+# Task 1
+set.seed(12345)
+parole_split = initial_split(parole, prob = 0.70, strata = violator)
+train = training(parole_split)
+test = testing(parole_split)
+```
+
+```{r}
+# Task 2
+class_recipe = recipe(violator ~ ., train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+class_model = decision_tree() %>% 
+  set_engine("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+class_wflow = 
+  workflow() %>% 
+  add_model(class_model) %>% 
+  add_recipe(class_recipe)
+
+class_fit = fit(class_wflow, train)
+
+class_fit %>%
+  pull_workflow_fit() %>%
+  pluck("fit")
+
+tree = class_fit %>% 
+  pull_workflow_fit() %>% 
+  pluck("fit")
+
+fancyRpartPlot(tree, tweak=1.25)
+```
+Task 3
+
+The parolee described in Task 3 would be classified as a non-violator. The beginning branch suggests that the parolee is not from Louisiana, so I chose no. The next branch suggests that the parolee did not have multiple offenses so I once again chose no. I then followed the max sentence is < 13, time served is not >= 5.1, and age is < 41 to arrive at a 44% chance of violation which would be classified as a non-violator. 
+
+```{r}
+# Task 4
+class_fit$fit$fit$fit$cptable
+```
+The optimal CP value for this tree is 0.02542373. The tree from Task 2 is not associated with this cp value.
+
+```{r}
+# Task 5 (1)
+set.seed(123)
+folds = vfold_cv(train, v = 5)
+```
+
+```{r}
+# Task 5 (2)
+tuned_recipe = recipe(violator ~., train) %>%
+  step_dummy(all_nominal(),-all_outcomes())
+
+tuned_model = decision_tree(cost_complexity = tune()) %>% 
+  set_engine("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+tuned_grid = grid_regular(cost_complexity(),
+                          levels = 25) 
+
+tuned_wflow = 
+  workflow() %>% 
+  add_model(tuned_model) %>% 
+  add_recipe(tuned_recipe)
+
+tuned_res = 
+  tuned_wflow %>% 
+  tune_grid(
+    resamples = folds,
+    grid = tuned_grid
+    )
+
+tuned_res
+```
+```{r}
+# Task 5
+tuned_res %>%
+  collect_metrics() %>%
+  ggplot(aes(cost_complexity, mean)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2)
+
+best_tree = tuned_res %>%
+  select_best("accuracy")
+
+best_tree
+```
+Task 6
+
+The cp value that yields the optimal accuracy value is 0.1.
+
+
+```{r}
+# Task 7 (1)
+final_wf = 
+  tuned_wflow %>% 
+  finalize_workflow(best_tree)
+```
+
+```{r}
+# Task 7 (2)
+final_fit = fit(final_wf, train)
+
+tree_2 = final_fit %>% 
+  pull_workflow_fit() %>% 
+  pluck("fit")
+
+# fancyRpartPlot(tree_2, tweak=1.25)
+
+
+```
+
+```{r}
+# Task 8
+treepred = predict(final_fit, train, type = "class")
+head(treepred)
+
+confusionMatrix(treepred$.pred_class,train$violator)
+```
+The accuracy of the root generated in task 7 is .8836.
+
+```{r}
+# Task 9 (1)
+blood <- read_csv("Blood.csv")
+
+blood = blood %>% mutate(DonatedMarch = as_factor(DonatedMarch)) %>%
+  mutate(DonatedMarch = fct_recode(DonatedMarch, "yes" = "1", "no" = "0"))
+```
+```{r}
+# Task 9 (2)
+set.seed(1234)
+blood_split = initial_split(blood, prob = 0.70, strata = DonatedMarch)
+train_2 = training(blood_split)
+test_2 = testing(blood_split)
+```
+
+```{r}
+# Task 9 (3)
+set.seed(1234)
+blood_folds = vfold_cv(train_2, v = 5)
+
+blood_recipe = recipe(DonatedMarch ~., train_2) %>%
+  step_dummy(all_nominal(),-all_outcomes())
+
+blood_model = decision_tree(cost_complexity = tune()) %>% 
+  set_engine("rpart", model = TRUE) %>%
+  set_mode("classification")
+
+blood_grid = grid_regular(cost_complexity(),
+                          levels = 25) 
+
+blood_wflow = 
+  workflow() %>% 
+  add_model(blood_model) %>% 
+  add_recipe(blood_recipe)
+
+blood_res = 
+  blood_wflow %>% 
+  tune_grid(
+    resamples = blood_folds,
+    grid = blood_grid
+    )
+
+blood_res
+
+blood_res %>%
+  collect_metrics() %>%
+  ggplot(aes(cost_complexity, mean)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2)
+
+blood_tree = blood_res %>%
+  select_best("accuracy")
+
+blood_tree
+```
+
+
+```{r}
+# Task 10
+blood_final_wf = 
+  blood_wflow %>% 
+  finalize_workflow(blood_tree)
+
+blood_final_fit = fit(blood_final_wf, train_2)
+
+blood_tree_2 = blood_final_fit %>% 
+  pull_workflow_fit() %>% 
+  pluck("fit")
+
+# fancyRpartPlot(blood_tree_2, tweak=1.25)
+```
+
+I was very confused by the instructions for tasks 9 and 10. I spent a couple hours trying to plot this final tree without an error but could not do it.
+
+```{r}
+# Task 11
+treepred_2 = predict(blood_final_fit, train_2, type = "class")
+head(treepred_2)
+
+confusionMatrix(treepred_2$.pred_class,train_2$DonatedMarch)
+```
+The accuracy of the tree generated in task 10 is .7616.
+

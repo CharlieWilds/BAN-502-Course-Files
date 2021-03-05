@@ -1,0 +1,100 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Charlie Wilds
+# BAN 502
+# Module 3 Assignment 1
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(tidymodels)
+```
+
+```{r}
+bike <- read_csv("bike_cleaned.csv")
+
+bike = bike%>% mutate(dteday =mdy(dteday))
+bike = bike%>% mutate(season =factor(season))
+bike = bike%>% mutate(mnth =factor(mnth))
+bike = bike%>% mutate(holiday =factor(holiday), weekday =factor(weekday))
+bike = bike%>% mutate(workingday =factor(workingday), weathersit =factor(weathersit))
+bike = bike%>% mutate(hr =factor(hr))
+```
+
+```{r}
+# Task 1
+set.seed(1234)
+bike_split = initial_split(bike, prob = 0.70, strata = count)
+train = training(bike_split)
+test = testing(bike_split)
+```
+
+```{r}
+# Task 2
+nrow(train)
+nrow(test)
+```
+The training set has a total of 13,036 rows. The testing set has 4,343.
+
+```{r}
+# Task 3
+train_simp = recipe(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, train)
+train_simp
+
+lm_model = 
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow =
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(train_simp)
+
+lm_fit = fit(lm_wflow, train)
+
+confint(lm_fit$fit$fit$fit)
+
+summary(lm_fit$fit$fit$fit)
+
+
+```
+This model showed many variables that had a very low p - value which is very encouraging. The model also had a healthy adjusted R-squared of 0.6229. Both of these are signs that this model includes multiple significant variables and could be very helpful as a whole.
+
+```{r}
+# Task 4
+predict_train = lm_fit %>% predict(train) %>% bind_cols(train) %>% metrics(truth = count, estimate = .pred)
+predict_train
+
+ggplot(predict_train,aes(x=.estimate)) +
+  geom_histogram() +
+  theme_bw()
+
+```
+
+The histogram showed a pretty even split between the variables.
+
+```{r}
+# Task 5
+test_simp = recipe(count ~ season + mnth + hr + holiday + weekday + temp + weathersit, test)
+test_simp
+
+test_model = 
+  linear_reg() %>%
+  set_engine("lm")
+
+test_wflow =
+  workflow() %>%
+  add_model(test_model) %>%
+  add_recipe(test_simp)
+
+test_fit = fit(test_wflow, test)
+
+confint(test_fit$fit$fit$fit)
+
+summary(test_fit$fit$fit$fit)
+```
+
+The adjusted r-squared for the testing set is 0.623 which is very close to the r-squared of the training set which suggests that there is no overfitting.

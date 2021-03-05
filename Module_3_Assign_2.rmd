@@ -1,0 +1,218 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+```{r}
+# install.packages("e1071")
+# install.packages("ROCR")
+```
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+library(e1071)
+library(ROCR)
+```
+
+
+```{r}
+parole <- read_csv("parole.csv")
+
+```
+
+```{r}
+parole = parole %>% mutate(male = as_factor(male)) %>%
+  mutate(male = fct_recode(male, "male" = "1", "female" = "0"))
+parole = parole %>% mutate(race = as_factor(race)) %>%
+  mutate(race = fct_recode(race, "white" = "1", "other" = "2"))
+parole = parole %>% mutate(state = as_factor(state)) %>%
+  mutate(state = fct_recode(state, "other" = "1", "Kentucky" = "2", "Louisiana" = "3", "Virginia" = "4"))
+parole = parole %>% mutate(crime = as_factor(crime)) %>%
+  mutate(crime = fct_recode(crime, "other" = "1", "larceny" = "2", "drug-related" = "3", "driving-related" = "4"))
+parole = parole %>% mutate(multiple.offenses = as_factor(multiple.offenses)) %>%
+  mutate(multiple.offenses = fct_recode(multiple.offenses, "multiple" = "1", "not multiple" = "0"))
+parole = parole %>% mutate(violator = as_factor(violator)) %>%
+  mutate(violator = fct_recode(violator, "violated" = "1", "did not violate" = "0"))
+```
+
+```{r}
+# Task 1
+set.seed(12345)
+parole_split = initial_split(parole, prob = 0.70, strata = violator)
+train = training(parole_split)
+test = testing(parole_split)
+train
+```
+
+```{r}
+# Task 2
+ggplot(train, aes(x=violator, fill=male)) + geom_bar() + theme_bw()
+ggplot(train, aes(x=violator, fill=race)) + geom_bar() + theme_bw()
+ggplot(train, aes(x=violator, fill=state)) + geom_bar() + theme_bw()
+ggplot(train, aes(x=violator, fill=crime)) + geom_bar() + theme_bw()
+ggplot(train, aes(x=violator, fill=multiple.offenses)) + geom_bar() + theme_bw()
+```
+Looking at the stacked barcharts above, it seems that state is the best predictor variable for violator.
+
+```{r}
+# Task 3
+train_recipe = recipe(violator ~ state, train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+train_model =
+  logistic_reg() %>%
+  set_engine("glm")
+
+train_wf = workflow() %>%
+  add_recipe(train_recipe) %>%
+  add_model(train_model)
+
+train_fit = fit(train_wf, train)
+
+summary(train_fit$fit$fit$fit)
+
+```
+This came out to be a sufficient model for predicting the violator variable. Both Louisiana and Virginia had very low p-values suggesting their is a high correlation.
+```{r}
+# Task 4
+train_recipe2 = recipe(violator ~ ., train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+train_model2 =
+  logistic_reg() %>%
+  set_engine("glm")
+
+train_wf2 = workflow() %>%
+  add_recipe(train_recipe2) %>%
+  add_model(train_model2)
+
+train_fit2 = fit(train_wf2, train)
+
+summary(train_fit2$fit$fit$fit)
+
+predict_train = predict(train_fit2, train, type="prob")
+head(predict_train)
+```
+
+I tried multiple different combinations for the predictor variables but I could not get any to show a higher AIC than my previous model (308.7) just using the state variable. In this model I used all the variables in the training set and got an AIC of 300.08.
+
+```{r}
+# Task 5
+train_recipe3 = recipe(violator ~ state + multiple.offenses + race, train) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+train_model3 =
+  logistic_reg() %>%
+  set_engine("glm")
+
+train_wf3 = workflow() %>%
+  add_recipe(train_recipe3) %>%
+  add_model(train_model3)
+
+train_fit3 = fit(train_wf3, train)
+
+summary(train_fit3$fit$fit$fit)
+
+predict_train2 = predict(train_fit3, train, type="prob")[2]
+head(predict_train2)
+```
+This model had an AIC of 289.99. Some of the key variable in this model were Louisiana, Virginia, and the multiple.offenses variable.
+```{r}
+# Task 6
+
+# Parolee 1
+newdata = data.frame(state = "Louisiana", multiple.offenses = "multiple", race = "white")
+predict(train_fit3, newdata, type="prob")
+
+# Parolee 2
+newdata2 = data.frame(state = "Kentucky", multiple.offenses = "not multiple", race = "other")
+predict(train_fit3, newdata2, type="prob")
+```
+The probability of parolee 1 violating is around 44 %.
+The probability of parolee 2 violating is around 15 %.
+```{r}
+# Task 7 (1)
+ROCRpred = prediction(predict_train2, train$violator)
+
+ROCRperf = performance(ROCRpred, "tpr", "fpr")
+plot(ROCRperf, colorize = TRUE, print.cutoffs.at=seq(0,1,by=0.1), text.adj=c(-0.2,1.7))
+```
+```{r}
+# Task 7 (2)
+as.numeric(performance(ROCRpred, "auc")@y.values)
+```
+```{r}
+# Task 7 (3)
+opt.cut = function(perf, pred){
+    cut.ind = mapply(FUN=function(x, y, p){
+        d = (x - 0)^2 + (y-1)^2
+        ind = which(d == min(d))
+        c(sensitivity = y[[ind]], specificity = 1-x[[ind]], 
+            cutoff = p[[ind]])
+    }, perf@x.values, perf@y.values, pred@cutoffs)
+}
+print(opt.cut(ROCRperf, ROCRpred))
+```
+The ideal probability threshold for this curve is .107.
+
+```{r}
+# Task 8 (1)
+t1 = table(train$violator,predict_train2 > 0.1070172)
+t1
+```
+```{r}
+# Task 8 (2)
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+The accuracy of this model is 0.81.
+```{r}
+# Task 8 (3)
+41/(18+41)
+```
+The sensitivity of the model is .69.
+```{r}
+# Task 8 (4)
+368/(368+80)
+```
+The specificity of the model is .82.
+
+The implications of incorrectly categorizing a parolee are the values that we did not correctly calculate. The violated - FALSE value was 18 and the did not violate - TRUE value was 80.
+
+```{r}
+# Task 9 (1)
+t1 = table(train$violator,predict_train2 > 0.5)
+t1
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+```{r}
+# Task 9 (2)
+t1 = table(train$violator,predict_train2 > 0.45)
+t1
+(t1[1,1]+t1[2,2])/nrow(train)
+```
+The probability threshold that best maximizes the accuracy of this training set is 0.45.
+```{r}
+test_recipe = recipe(violator ~ state + multiple.offenses + race, test) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+test_model =
+  logistic_reg() %>%
+  set_engine("glm")
+
+test_wf = workflow() %>%
+  add_recipe(test_recipe) %>%
+  add_model(test_model)
+
+test_fit = fit(test_wf, test)
+
+summary(test_fit$fit$fit$fit)
+
+predict_test = predict(test_fit, test, type="prob")[2]
+
+t1 = table(test$violator,predict_test > 0.45)
+t1
+(t1[1,1]+t1[2,2])/nrow(test)
+```
+When using the .45 probability threshold on the testing set, the accuracy is .922 which is slightly higher than the training set.

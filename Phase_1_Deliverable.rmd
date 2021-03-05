@@ -1,0 +1,173 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+I tried using the grid.arrange function to compact all the graphs into a couple chunks of code but it looked terrible on the word doc so I kept it the way you had it. I commented out the structure and the summary because it was like 6 pages on the word doc, but I figured it's a good function to use if we're analyzing the data set, so maybe we could leave a comment like "we checked the summary and structure of the data set to make sure all the factor recoding was accurate and everything was in order" or something like that. I'm not sure if we should leave more comments too, so just let me know what you think. But the graphs look awesome bro, great job.
+
+
+
+## Charlie Wilds and Steven Booksh
+## BAN 502
+## Course Project - Phase 1
+
+
+```{r, include = FALSE}
+library(tidyverse)
+library(naniar)
+library(tidymodels)
+library(GGally)
+library(vip)
+library(caret)
+library(gridExtra)
+library(ranger)
+library(randomForest)
+```
+
+```{r}
+student <- read_csv("ames_student.csv")
+```
+## RECODING CHARACTER VARIABLES INTO FACTORS
+```{r}
+student = student %>%
+mutate(MS_SubClass=as_factor(MS_SubClass), MS_Zoning=as_factor(MS_Zoning), Street=as_factor(Street), Alley=as_factor(Alley), Lot_Shape=as_factor(Lot_Shape), Land_Contour=as_factor(Land_Contour), Utilities=as_factor(Utilities), Lot_Config=as_factor(Lot_Config), Land_Slope = as_factor(Land_Slope), Neighborhood = as_factor(Neighborhood), Condition_1 = as_factor(Condition_1), Condition_2 = as_factor(Condition_2), Bldg_Type = as_factor(Bldg_Type), House_Style = as_factor(House_Style), Overall_Qual = as_factor(Overall_Qual), Overall_Cond = as_factor(Overall_Cond), Roof_Style = as_factor(Roof_Style), Roof_Matl = as_factor(Roof_Matl), Exterior_1st = as_factor(Exterior_1st), Exterior_2nd = as_factor(Exterior_2nd), Mas_Vnr_Type = as_factor(Mas_Vnr_Type), Mas_Vnr_Area = as_factor(Mas_Vnr_Area), Exter_Qual = as_factor(Exter_Qual), Exter_Cond = as_factor(Exter_Cond), Foundation = as_factor(Foundation), Bsmt_Qual = as_factor(Bsmt_Qual), Bsmt_Cond =as_factor(Bsmt_Cond), Bsmt_Exposure = as_factor(Bsmt_Exposure), BsmtFin_Type_1 = as_factor(BsmtFin_Type_1), BsmtFin_Type_2 = as_factor(BsmtFin_Type_2), Heating =as_factor(Heating), Heating_QC = as_factor(Heating_QC), Central_Air = as_factor(Central_Air), Electrical = as_factor(Electrical), Kitchen_Qual = as_factor(Kitchen_Qual), Functional = as_factor(Functional), Fireplace_Qu = as_factor(Fireplace_Qu), Garage_Type = as_factor(Garage_Type), Garage_Finish = as_factor(Garage_Finish), Garage_Qual = as_factor(Garage_Qual), Garage_Cond = as_factor(Garage_Cond), Paved_Drive =as_factor(Paved_Drive), Pool_QC = as_factor(Pool_QC), Fence = as_factor(Fence), Misc_Feature = as_factor(Misc_Feature), Sale_Type = as_factor(Sale_Type), Sale_Condition = as_factor(Sale_Condition))
+```
+
+
+
+
+# CHECKING FOR MISSING DATA
+```{r}
+vis_miss(student)
+```
+
+
+## STRUCTURE AND SUMMARY OF DATA SET
+```{r}
+# str(student)
+# summary(student)
+```
+
+
+## OBSERVATION AND VARIABLE TOTALS
+```{r}
+nrow(student)
+ncol(student)
+```
+
+## RANDOM FOREST MODEL
+```{r}
+set.seed(1234)
+imp_student = mice(student, m=5, method='pmm', printFlag=FALSE)
+
+student_complete = complete(imp_student)
+
+rf_recipe = recipe(Above_Median ~., student) %>%
+  step_dummy(all_nominal(), -all_outcomes())
+
+rf_model = rand_forest() %>% 
+  set_engine("ranger", importance = "permutation") %>% 
+  set_mode("classification")
+
+rf_wflow = 
+  workflow() %>% 
+  add_model(rf_model) %>% 
+  add_recipe(rf_recipe)
+
+set.seed(123)
+rf_fit = fit(rf_wflow, student_complete)
+
+rf_fit
+```
+## VARIABLE IMPORTANCE
+```{r}
+rf_fit %>% pull_workflow_fit() %>% vip(geom = "point")
+```
+
+
+## STRONG PREDICTORS OF Above_Median HOME SALES VARIABLE
+
+
+### *VISUALIZATION FOR Ground Living Area (Gr_Liv_Area)*
+```{r}
+ggplot(student, aes(x=Gr_Liv_Area,fill=Above_Median)) + geom_histogram(binwidth=250) + theme_bw()
+```
+
+
+### *VISUALIZATION FOR Year Built (Year_Built)*
+```{r}
+ggplot(student, aes(x=Above_Median,y=Year_Built)) + geom_boxplot(aes(fill=Above_Median)) + theme_bw() + geom_jitter(alpha=.2)
+```
+
+
+### *VISUALIZATION FOR Garage Cars (Garage_Cars)*
+```{r}
+ggplot(student, aes(x=Garage_Cars,fill=Above_Median)) + geom_bar() + theme_bw()
+```
+
+
+### *ADDITIONAL TABLE FOR Garage Cars (Garage_Cars)*
+```{r}
+t1 = table(student$Above_Median, student$Garage_Cars)
+prop.table(t1, margin = 2)
+```
+
+
+### *VISUALIZATION FOR Garage Area (Garage_Area)*
+```{r}
+ggplot(student, aes(x=Garage_Area,fill=Above_Median)) + geom_histogram(binwidth=200) + theme_bw()
+```
+
+
+### *VISUALIZATION FOR Full Bathrooms (Full_Bath)*
+```{r}
+ggplot(student, aes(x=Full_Bath,fill=Above_Median)) + geom_bar() + theme_bw()
+```
+
+
+### *ADDITIONAL TABLE FOR Full Bathrooms (Full_Bath)*
+```{r}
+t1 = table(student$Above_Median, student$Full_Bath)
+prop.table(t1, margin = 2)
+```
+
+
+### *VISUALIZATION FOR Total Basement Square Footage (Total_Bsmt_SF)*
+```{r}
+ggplot(student, aes(x=Total_Bsmt_SF,fill=Above_Median)) + geom_histogram(binwidth=300) + theme_bw()
+```
+
+
+### *VISUALIZATION FOR First Floor Square Footage (First_Flr_SF)*
+```{r}
+ggplot(student, aes(x=First_Flr_SF,fill=Above_Median)) + geom_histogram(binwidth=350) + theme_bw()
+```
+
+
+### *VISUALIZATION FOR Year Home was Remodeled (Year_Remod_Add)*
+```{r}
+ggplot(student, aes(x=Above_Median,y=Year_Remod_Add)) + geom_boxplot(aes(fill=Above_Median)) + theme_bw() + geom_jitter(alpha=0.2)
+```
+
+
+## WEAK PREDICTORS OF Above_Median HOME SALES VARIABLE
+
+
+### *VISUALIZATION FOR Utilities (Utilities)*
+```{r}
+ggplot(student, aes(x=Utilities, fill=Above_Median)) + geom_bar() + theme_bw()
+```
+
+
+### *VISUALIZATION FOR Roof Style (Roof_Style)*
+```{r}
+ggplot(student, aes(x=Roof_Style,fill=Above_Median)) + geom_bar() + theme_bw()
+```
+
+
+### *VISUALIZATION FOR Street Type (Street)*
+```{r}
+ggplot(student, aes(x=Street, fill=Above_Median)) + geom_bar() + theme_bw()
+```
+

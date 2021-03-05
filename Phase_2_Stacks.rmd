@@ -1,0 +1,268 @@
+```{r, include=FALSE}
+install.packages("stacks")
+```
+
+
+
+```{r, include=FALSE}
+library(tidyverse)
+library(tidymodels)
+library(caret)
+library(mice)
+library(VIM)
+library(ranger)
+library(RColorBrewer)
+library(rpart)
+library(rattle)
+library(e1071)
+library(xgboost)
+library(usemodels)
+library(nnet)
+library(stacks)
+```
+
+```{r}
+student <- read.csv("ames_student.csv")
+competition <- read_csv("ames_competition.csv")
+
+```
+
+```{r}
+student <- student %>% mutate_if(is.character,as_factor)
+
+student1 <- student %>% select(c("Gr_Liv_Area","Year_Built","Full_Bath",
+                                 "Garage_Area","Garage_Cars",
+                                 "Total_Bsmt_SF","First_Flr_SF",
+                                 "Year_Remod_Add",
+                                 "Second_Flr_SF","Above_Median"))
+
+```
+
+```{r}
+set.seed(123)
+student1_split = initial_split(student1, prop = 0.7, strata = Above_Median)
+train = training(student1_split)
+test = testing(student1_split)
+
+```
+
+```{r}
+set.seed(123)
+folds = vfold_cv(train, v = 5)
+```
+
+```{r}
+student_recipe = recipe(Above_Median ~., train)
+
+ctrl_grid = control_stack_grid()
+ctrl_res = control_stack_resamples() 
+```
+
+
+Classification Tree
+```{r}
+tree_model = decision_tree(cost_complexity = tune()) %>% 
+  set_engine("rpart", model = TRUE) %>% 
+  set_mode("classification")
+
+tree_recipe = student_recipe %>%
+  step_dummy(all_nominal(),-all_outcomes())
+
+tree_workflow = workflow() %>%
+  add_model(tree_model) %>%
+  add_recipe(tree_recipe)
+
+set.seed(1234)
+tree_res = 
+  tree_workflow %>% 
+  tune_grid(
+    resamples = folds,
+    grid = 25, 
+    control = ctrl_grid)
+```
+
+```{r}
+tree_res %>%
+  collect_metrics() %>%
+  ggplot(aes(cost_complexity, mean)) +
+  geom_line(size = 1.5, alpha = 0.6) +
+  geom_point(size = 2) +
+  facet_wrap(~ .metric, scales = "free", nrow = 2) 
+```
+
+Random Forest
+```{r}
+rf_recipe = tree_recipe %>%
+   step_dummy(all_nominal(), -all_outcomes())
+ 
+rf_model = rand_forest(mtry = tune(), min_n = tune(), trees = 200) %>% 
+   set_engine("ranger", importance = "permutation") %>% 
+   set_mode("classification")
+ 
+rf_wflow = 
+   workflow() %>% 
+   add_model(rf_model) %>% 
+   add_recipe(rf_recipe)
+ 
+set.seed(1234)
+rf_res = tune_grid(
+   rf_wflow,
+   resamples = folds,
+   grid = 200, 
+   control = ctrl_grid)
+```
+
+```{r}
+saveRDS(rf_res,"rf_res.rds")
+```
+
+```{r}
+rf_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "Accuracy")
+```
+
+Neural Network
+```{r}
+nn_recipe = student_recipe %>%
+   step_normalize(all_predictors(), -all_nominal()) 
+ 
+nn_model =
+   mlp(hidden_units = tune(), penalty = tune(),
+      epochs = tune()) %>%
+   set_mode("classification") %>%
+   set_engine("nnet", verbose = 0) 
+ 
+nn_workflow <-
+   workflow() %>%
+   add_recipe(nn_recipe) %>%
+   add_model(nn_model)
+ 
+set.seed(1234)
+ neural_res <-
+   tune_grid(nn_workflow,
+             resamples = folds,
+             grid = 200,
+             control = ctrl_grid)
+```
+
+```{r}
+saveRDS(neural_res,"neural_res.rds")
+```
+
+```{r}
+neural_res = readRDS("neural_res.rds")
+```
+
+```{r}
+neural_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  select(mean, hidden_units, penalty, epochs) %>%
+  pivot_longer(hidden_units:epochs,
+    values_to = "value",
+    names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "Accuracy")
+```
+
+```{r}
+neural_res %>%
+  collect_metrics() %>%
+  filter(.metric == "accuracy") %>%
+  mutate(hidden_units = factor(hidden_units)) %>%
+  ggplot(aes(penalty, mean, color = epochs)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  facet_wrap(~hidden_units, ncol =2 ) + 
+  labs(y = "Accuracy")
+```
+
+XGB
+```{r}
+start_time = Sys.time() 
+
+tgrid = expand.grid(
+  trees = 100,  
+  min_n = 1,  
+  tree_depth = c(1,2,3,4),  
+  learn_rate = c(0.01, 0.1, 0.2, 0.3, 0.4),  
+  loss_reduction = 0,  
+  sample_size = c(0.5, 0.8, 1))  
+
+xgboost_recipe <- 
+  recipe(formula = Above_Median ~ ., data = train) %>% 
+  #step_novel(all_nominal(), -all_outcomes()) %>% 
+  step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
+  step_zv(all_predictors()) 
+
+xgboost_spec <- 
+  boost_tree(trees = tune(), min_n = tune(), tree_depth = tune(), learn_rate = tune(), 
+    loss_reduction = tune(), sample_size = tune()) %>% 
+  set_mode("classification") %>% 
+  set_engine("xgboost") 
+
+xgboost_workflow <- 
+  workflow() %>% 
+  add_recipe(xgboost_recipe) %>% 
+  add_model(xgboost_spec) 
+
+set.seed(1234)
+xgb_res <-
+  tune_grid(xgboost_workflow, 
+            resamples = folds, 
+            grid = tgrid,
+            control = ctrl_grid)
+
+end_time = Sys.time()
+end_time-start_time
+```
+
+Stacks
+```{r}
+student_stacks = stacks() %>%
+  add_candidates(tree_res) %>%
+  add_candidates(rf_res) %>% 
+  add_candidates(neural_res) %>%
+  add_candidates(xgb_res)
+```
+
+```{r}
+student_blend = 
+  student_stacks %>% 
+  blend_predictions(metric = metric_set(accuracy))
+```
+
+```{r}
+autoplot(student_blend, type = "weights")
+```
+
+```{r}
+student_blend <-
+  student_blend %>%
+  fit_members()
+```
+
+```{r}
+trainpredstack = predict(student_blend, train)
+head(trainpredstack)
+```
+
+```{r}
+confusionMatrix(trainpredstack$.pred_class, train$Above_Median, 
+                positive = "Yes")
+```
+
+```{r}
+comppredstack = predict(student_blend, competition)
+head(comppredstack)
+```
+

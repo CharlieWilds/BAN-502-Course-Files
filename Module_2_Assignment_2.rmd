@@ -1,0 +1,171 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+## Charlie Wilds
+## BAN 502
+## Module 2 Assignment 2 - Multiple Linear Regression
+
+```{r}
+# install.packages("glmnet")
+# install.packages("ggcorrplot")
+# install.packages("MASS")
+# install.packages("car")
+# install.packages("lubridate")
+library(tidyverse)
+library(tidymodels)
+library(glmnet)
+library(GGally)
+library(ggcorrplot)
+library(MASS)
+library(car)
+library(lubridate)
+library(lmtest)
+```
+
+
+```{r}
+# Task 1
+bike <- read_csv("bike_cleaned.csv")
+
+bike = bike%>% mutate(dteday =mdy(dteday))
+bike = bike%>% mutate(season =factor(season))
+bike = bike%>% mutate(mnth =factor(mnth))
+bike = bike%>% mutate(holiday =factor(holiday), weekday =factor(weekday))
+bike = bike%>% mutate(workingday =factor(workingday), weathersit =factor(weathersit))
+bike = bike%>% mutate(hr =factor(hr))
+```
+
+The hr variable is categorical, made to assign each observation to a value 0-23. If we left this variable as a number it would be treated as a calculation instead of a group.
+
+```{r}
+# Task 2
+ggcorr(bike, label=TRUE)
+```
+
+The "atemp" and "temp" variables both had a positive correlation of 0.4 which was the highest in the data set.
+
+```{r}
+# Task 3
+ggplot(bike,aes(x=hr,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=season,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=mnth,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=holiday,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=weekday,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=workingday,y=count))+ geom_boxplot()+ theme_bw()
+ggplot(bike,aes(x=weathersit,y=count))+ geom_boxplot()+ theme_bw()
+```
+
+#### hr
+The hr variable shows noticeable trends of incline and decline in three different areas. This indicates that hr affects count.
+
+#### season
+This box plot suggests that the count variable is higher during warm weather and drops significantly during Winter so there seems to be somewhat of a correlation between the two variables.
+
+#### mnth
+This box plot supports the evidence found in the season box plot, suggesting that count is higher in warmer weather so a correlation between mnth and count is suspected.
+
+#### holiday
+This box plot clearly shows that the count variable is higher on non-holidays which can be seen as a correlation.
+
+#### weekday
+There are no signs of any trends when examining the box plot for these two variables which suggests that there is no correlation between weekday and count.
+
+#### workingday
+This box plot shows that the median for the WorkingDay variable is slightly higher than NotWorkingDay variable with many more outliers on the higher end of the plot. This suggests that there might be some sort of a correlation between the two variables, but it isn't definite.
+
+#### weathersit
+This box plot shows the strongest correlation of any. It is clear that the count variable is higher when there is no precipitation.
+
+```{r}
+# Task 4
+bike_simp = recipe(count ~ weathersit, bike)
+bike_simp
+
+lm_model = 
+  linear_reg() %>%
+  set_engine("lm")
+
+lm_wflow =
+  workflow() %>%
+  add_model(lm_model) %>%
+  add_recipe(bike_simp)
+
+lm_fit = fit(lm_wflow, bike)
+
+confint(lm_fit$fit$fit$fit)
+
+summary(lm_fit$fit$fit$fit)
+
+
+```
+
+My model was built around the weathersit variable. I thought the box plot showed a pretty clear correlation between the two variables, but I was very very wrong. The p-values were very high for all of the choices, and the adjusted R-squared was minuscule 0.02132.
+
+```{r}
+# Task 5 (1)
+ridge_recipe = recipe(count ~ ., bike) %>%
+  step_rm(instant, dteday, registered, casual) %>%
+  step_dummy(all_nominal()) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+
+ridge_model = 
+  linear_reg(mixture=0) %>%
+  set_engine("glmnet")
+
+ridge_wflow =
+  workflow() %>%
+  add_model(ridge_model) %>%
+  add_recipe(ridge_recipe)
+
+ridge_fit = fit(ridge_wflow, bike)
+
+ridge_fit
+
+```
+```{r}
+# task 5 (2)
+ridge_fit %>%
+  pull_workflow_fit %>%
+  pluck("fit")
+
+plot(ridge_fit$fit$fit$fit$lambda,ridge_fit$fit$fit$fit$dev.ratio)
+
+```
+
+An appropriate lambda value for this model would be 43, because at this point the model seems to flatten out. Overall, I felt this model was helpful insight into the model. The extra steps added by the ridge function gave us more insight than the previous model.
+
+```{r}
+# Task 6 (1)
+lasso_recipe = recipe(count ~ ., bike) %>%
+  step_rm(instant, dteday, registered, casual) %>%
+  step_dummy(all_nominal()) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors())
+
+lasso_model = 
+  linear_reg(mixture=1) %>%
+  set_engine("glmnet")
+
+lasso_wflow =
+  workflow() %>%
+  add_model(lasso_model) %>%
+  add_recipe(lasso_recipe)
+
+lasso_fit = fit(lasso_wflow, bike)
+
+lasso_fit
+
+```
+
+```{r}
+# Task 6 (2)
+lasso_fit %>%
+  pull_workflow_fit %>%
+  pluck("fit")
+
+plot(lasso_fit$fit$fit$fit$lambda,lasso_fit$fit$fit$fit$dev.ratio)
+```
+An appropriate lambda value for this model would be .582, because at this point the model seems to flatten out. The lasso method can be more useful by allowing more variables to be included in the model. The lasso method also explains more variance than the ridge model.
