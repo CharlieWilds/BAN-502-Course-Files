@@ -1,0 +1,92 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 4 Assignment 1
+## Wilds, Charles
+### Data Transformation
+
+```{r}
+library(tidyverse)
+state_income <- read_csv("state_income.csv")
+```
+
+#### State Incomes
+
+In this markdown file we will first be creating a subset of data from the *state_income* file. We will be using the following variables:
+1.) State_Name
+2.) State_ab
+3.) County
+4.) City
+5.) Type
+6.) ALand
+7.) Mean
+8.) Median
+9.) Stdev
+
+```{r}
+state_income2 <- select(state_income, State_Name, State_ab, County, City, Type, ALand, Mean, Median, Stdev)
+state_income2 <- select(state_income2, State_ab, everything())
+head(state_income2,n=10)
+```
+```{r}
+state_income2 <- rename(state_income2, SquareArea = ALand)
+state_income2 <- rename(state_income2, IncomeMean = Mean)
+state_income2 <- rename(state_income2, IncomeMedian = Median)
+state_income2 <- rename(state_income2, IncomeStDev = Stdev)
+
+head(state_income2,n=10)
+```
+```{r}
+NC_income <- filter(state_income2, State_Name== "North Carolina")
+head(NC_income,n=10)
+```
+
+#### NC Incomes
+
+We will now use the NC_Income data set to create a summary of the incomes withing North Carolina using the county, city, and type variables.
+
+```{r}
+NC_income <- arrange(NC_income, County)
+head(NC_income, n=10)
+```
+
+```{r}
+summary1 <- group_by(NC_income,County)
+summary1 <- summarise (summary1, mean= mean(IncomeMean))
+
+summary2 <- NC_income %>%
+ group_by(City) %>%
+ summarise (mean = mean(IncomeMean))
+```
+The first new data set summarizes the IncomeMean average and groups the NC_income data set by County and City. The second data set accomplishes all of this in one command.
+
+#### Income Visualization
+
+```{r}
+ggplot(data=summary1, aes(x=County,y=mean)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90,vjust =0.5, hjust=1)) +
+  labs(y = "Income")
+
+
+```
+Wake County has the highest income. Stokes County has the lowest income. Surry County has the second lowest income.
+
+```{r}
+AvgStateIncome <- group_by(state_income2, State_ab)
+AvgStateIncome <- summarise (AvgStateIncome, mean= mean(IncomeMean))
+
+AvgStateIncome <- filter(AvgStateIncome, grepl("N",State_ab))
+
+ggplot(data=AvgStateIncome, aes(x=State_ab,y=mean)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90,vjust =0.5, hjust=1)) +
+  labs(title = "Mean Income by State",
+       x = "State",
+       y = "Mean Income")
+
+```
+
+The above scatter plot shows that New Jersey had the highest income and Tennessee had the lowest.

@@ -1,0 +1,259 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# MIS503 – Final Project
+## Wilds, Charles
+### Zillow Home Value Index Analysis
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(readr)
+
+Sales <- read_csv("SingleFamilyResidenceSales.csv")
+Rental <- read_csv("SingleFamilyResidenceRental.csv")
+```
+
+###  Wake County Home Sales
+
+```{r}
+WakeCountySales <- filter(Sales, State== "NC" & CountyName == "Wake County")
+WakeCountySales <- select(WakeCountySales, RegionName, State, CountyName, Metro, "1996-05", "1997-05", "1998-05", "1999-05", "2000-05", "2001-05", "2002-05", "2003-05", "2004-05", "2005-05", "2006-05", "2007-05", "2008-05", "2009-05", "2010-05", "2011-05", "2012-05", "2013-05", "2014-05", "2015-05", "2016-05", "2017-05", "2018-05")
+
+WakeCountySales <- rename(WakeCountySales, "1996" = "1996-05")
+WakeCountySales <- rename(WakeCountySales, "1997" = "1997-05")
+WakeCountySales <- rename(WakeCountySales, "1998" = "1998-05")
+WakeCountySales <- rename(WakeCountySales, "1999" = "1999-05")
+WakeCountySales <- rename(WakeCountySales, "2000" = "2000-05")
+WakeCountySales <- rename(WakeCountySales, "2001" = "2001-05")
+WakeCountySales <- rename(WakeCountySales, "2002" = "2002-05")
+WakeCountySales <- rename(WakeCountySales, "2003" = "2003-05")
+WakeCountySales <- rename(WakeCountySales, "2004" = "2004-05")
+WakeCountySales <- rename(WakeCountySales, "2005" = "2005-05")
+WakeCountySales <- rename(WakeCountySales, "2006" = "2006-05")
+WakeCountySales <- rename(WakeCountySales, "2007" = "2007-05")
+WakeCountySales <- rename(WakeCountySales, "2008" = "2008-05")
+WakeCountySales <- rename(WakeCountySales, "2009" = "2009-05")
+WakeCountySales <- rename(WakeCountySales, "2010" = "2010-05")
+WakeCountySales <- rename(WakeCountySales, "2011" = "2011-05")
+WakeCountySales <- rename(WakeCountySales, "2012" = "2012-05")
+WakeCountySales <- rename(WakeCountySales, "2013" = "2013-05")
+WakeCountySales <- rename(WakeCountySales, "2014" = "2014-05")
+WakeCountySales <- rename(WakeCountySales, "2015" = "2015-05")
+WakeCountySales <- rename(WakeCountySales, "2016" = "2016-05")
+WakeCountySales <- rename(WakeCountySales, "2017" = "2017-05")
+WakeCountySales <- rename(WakeCountySales, "2018" = "2018-05")
+
+WakeCountySales <- pivot_longer(WakeCountySales,c("1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),names_to = 'YR',values_to = 'ZHVI')
+
+ggplot(data=WakeCountySales, aes(x=YR,y=ZHVI, color= RegionName)) +
+  geom_point()+
+  labs(y="Home Value", x="Year", title="Wake County Sales")+
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5))+
+  scale_y_continuous(name="Home Values (in $)", labels = scales::comma)
+
+ggplot(data=WakeCountySales, aes(x=YR,y=ZHVI, color= RegionName)) +
+  geom_col()+
+  labs(y="Home Value", x="Year", title="Wake County Sales")+
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5))+
+  scale_y_continuous(name="Home Values (in $)", labels = scales::comma)
+```
+
+a. What have been the overall trends in Wake County Home Values?
+
+The homes have saw a slight increase from 1999-2008, a slight decrease from 2008-2012, and a rapid increase from 2012-2018. The economic recession in 2008 could be a valid reason for these trends.
+
+b. There were dips in home values in the past 20 years. What years did these occur?
+
+1996-199 and 2008-2012
+
+c. Based on the analysis, where would be the least expensive area to purchase home?
+
+Zebulon
+
+   Most expensive area?
+   
+Over the course of the 20 years, Cary was continuously the most expensive, but for the most recent year New Hill was the highest.
+
+d. Are any area home values trending down?
+
+The final 7 years of the graph show that there are not any areas currently trending down.
+
+   Is there one area that stands out compared to others?
+   
+Cary was the highest for the overwhelming majority of the years.
+
+### NC Rental Market
+
+```{r}
+Rentals <- filter(Rental, State== "NC" & RegionName %in% c("Asheville","Charlotte","Durham","Fayetteville","Raleigh","Wilmington"))
+
+Rentals <- select(Rentals, RegionName, State, "2010-11", "2011-11", "2012-11", "2013-11", "2014-11", "2015-11", "2016-11", "2017-11", "2018-10")
+
+Rentals <- rename(Rentals, "2010" = "2010-11")
+Rentals <- rename(Rentals, "2011" = "2011-11")
+Rentals <- rename(Rentals, "2012" = "2012-11")
+Rentals <- rename(Rentals, "2013" = "2013-11")
+Rentals <- rename(Rentals, "2014" = "2014-11")
+Rentals <- rename(Rentals, "2015" = "2015-11")
+Rentals <- rename(Rentals, "2016" = "2016-11")
+Rentals <- rename(Rentals, "2017" = "2017-11")
+Rentals <- rename(Rentals, "2018" = "2018-10")
+Rentals <- rename(Rentals, City = RegionName)
+
+Rentals <- pivot_longer(Rentals,c("2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),names_to = 'YR',values_to = 'ZHVI')
+
+ggplot(data=Rentals, aes(x=YR,y=ZHVI, color= City)) +
+  geom_point()+
+  labs(y="Home Value", x="Year", title="North Carolina Rental Market")+
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5))+
+  scale_y_continuous(name="Home Values (in $)", labels = scales::comma)
+
+ggplot(data=Rentals, aes(x=YR,y=ZHVI, color= City)) +
+  geom_col()+
+  labs(y="Home Value", x="Year", title="North Carolina Rental Market")+
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5))+
+  scale_y_continuous(name="Home Values (in $)", labels = scales::comma)
+
+```
+
+a. What has been the overall trend in the rental market around the state? Are there any cities that
+have not followed this trend?
+
+The overall trend has been a consistent slight increase in home value over time. Fayetteville, however, has not followed this trend having been well below all the the other cities. Fayetteville is an apparent outlier.
+
+b. Where is the most expensive city to rent in?
+
+Over the full graph, Raleigh has consistently been the most expensive, however, Asheville has been the highest over the 3 most recent years.
+
+   Least expensive?
+   
+Fayetteville
+
+c. You are trying decide between Wilmington and Asheville. Which market has the lowest rent?
+Wilmington
+
+###  Home Values in Select Rental Markets
+
+```{r}
+NCHomeSales <- filter(Sales, State== "NC" & Metro %in% c("Asheville", "Charlotte-Concord-Gastonia", "Raleigh", "Wilmington"))
+
+NCHomeSales <- select(NCHomeSales, RegionName, State, Metro, "1996-05", "1997-05", "1998-05", "1999-05", "2000-05", "2001-05", "2002-05", "2003-05", "2004-05", "2005-05", "2006-05", "2007-05", "2008-05", "2009-05", "2010-05", "2011-05", "2012-05", "2013-05", "2014-05", "2015-05", "2016-05", "2017-05", "2018-05")
+
+NCHomeSales <- rename(NCHomeSales, "1996" = "1996-05")
+NCHomeSales <- rename(NCHomeSales, "1997" = "1997-05")
+NCHomeSales <- rename(NCHomeSales, "1998" = "1998-05")
+NCHomeSales <- rename(NCHomeSales, "1999" = "1999-05")
+NCHomeSales <- rename(NCHomeSales, "2000" = "2000-05")
+NCHomeSales <- rename(NCHomeSales, "2001" = "2001-05")
+NCHomeSales <- rename(NCHomeSales, "2002" = "2002-05")
+NCHomeSales <- rename(NCHomeSales, "2003" = "2003-05")
+NCHomeSales <- rename(NCHomeSales, "2004" = "2004-05")
+NCHomeSales <- rename(NCHomeSales, "2005" = "2005-05")
+NCHomeSales <- rename(NCHomeSales, "2006" = "2006-05")
+NCHomeSales <- rename(NCHomeSales, "2007" = "2007-05")
+NCHomeSales <- rename(NCHomeSales, "2008" = "2008-05")
+NCHomeSales <- rename(NCHomeSales, "2009" = "2009-05")
+NCHomeSales <- rename(NCHomeSales, "2010" = "2010-05")
+NCHomeSales <- rename(NCHomeSales, "2011" = "2011-05")
+NCHomeSales <- rename(NCHomeSales, "2012" = "2012-05")
+NCHomeSales <- rename(NCHomeSales, "2013" = "2013-05")
+NCHomeSales <- rename(NCHomeSales, "2014" = "2014-05")
+NCHomeSales <- rename(NCHomeSales, "2015" = "2015-05")
+NCHomeSales <- rename(NCHomeSales, "2016" = "2016-05")
+NCHomeSales <- rename(NCHomeSales, "2017" = "2017-05")
+NCHomeSales <- rename(NCHomeSales, "2018" = "2018-05")
+
+NCHomeSales <- pivot_longer(NCHomeSales,c("1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),names_to = 'YR',values_to = 'ZHVI')
+
+NCHomeSales <- group_by(NCHomeSales, Metro)
+
+ggplot(data=NCHomeSales, aes(x=Metro,y=ZHVI)) +
+  geom_violin()+
+  geom_boxplot(width=0.1) 
+```
+
+a. According to the results, which market has the lowest median price (represented as horizontal bar in box plot)?
+
+Charlotte-Concord-Gastonia
+
+b. The violin plot will show density meaning the wider the plot is, the more observations occur within
+that area. Which market has the most density around the median value of homes?
+
+Charlotte-Concord-Gastonia
+
+### Relocation Home Value Comparison
+
+```{r}
+NationalHomeSales <- filter(Sales, State %in% c("IL", "TX", "CO", "NY") & RegionName %in% c("Chicago", "Denver", "Houston", "New York"))
+
+NationalHomeSales <- select(NationalHomeSales, RegionName, State, Metro, "1996-05", "1997-05", "1998-05", "1999-05", "2000-05", "2001-05", "2002-05", "2003-05", "2004-05", "2005-05", "2006-05", "2007-05", "2008-05", "2009-05", "2010-05", "2011-05", "2012-05", "2013-05", "2014-05", "2015-05", "2016-05", "2017-05", "2018-05")
+
+NationalHomeSales <- rename(NationalHomeSales, "1996" = "1996-05")
+NationalHomeSales <- rename(NationalHomeSales, "1997" = "1997-05")
+NationalHomeSales <- rename(NationalHomeSales, "1998" = "1998-05")
+NationalHomeSales <- rename(NationalHomeSales, "1999" = "1999-05")
+NationalHomeSales <- rename(NationalHomeSales, "2000" = "2000-05")
+NationalHomeSales <- rename(NationalHomeSales, "2001" = "2001-05")
+NationalHomeSales <- rename(NationalHomeSales, "2002" = "2002-05")
+NationalHomeSales <- rename(NationalHomeSales, "2003" = "2003-05")
+NationalHomeSales <- rename(NationalHomeSales, "2004" = "2004-05")
+NationalHomeSales <- rename(NationalHomeSales, "2005" = "2005-05")
+NationalHomeSales <- rename(NationalHomeSales, "2006" = "2006-05")
+NationalHomeSales <- rename(NationalHomeSales, "2007" = "2007-05")
+NationalHomeSales <- rename(NationalHomeSales, "2008" = "2008-05")
+NationalHomeSales <- rename(NationalHomeSales, "2009" = "2009-05")
+NationalHomeSales <- rename(NationalHomeSales, "2010" = "2010-05")
+NationalHomeSales <- rename(NationalHomeSales, "2011" = "2011-05")
+NationalHomeSales <- rename(NationalHomeSales, "2012" = "2012-05")
+NationalHomeSales <- rename(NationalHomeSales, "2013" = "2013-05")
+NationalHomeSales <- rename(NationalHomeSales, "2014" = "2014-05")
+NationalHomeSales <- rename(NationalHomeSales, "2015" = "2015-05")
+NationalHomeSales <- rename(NationalHomeSales, "2016" = "2016-05")
+NationalHomeSales <- rename(NationalHomeSales, "2017" = "2017-05")
+NationalHomeSales <- rename(NationalHomeSales, "2018" = "2018-05")
+
+NationalHomeSales <- pivot_longer(NationalHomeSales,c("1996", "1997", "1998", "1999", "2000", "2001", "2002", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018"),names_to = 'YR',values_to = 'ZHVI')
+
+NationalHomeSales <- group_by(NationalHomeSales, Metro)
+
+ggplot(data=NationalHomeSales, aes(x=YR,y=ZHVI)) +
+  geom_point() +
+  facet_wrap(~Metro) +
+  labs(x="Year", title="City Home Value Comparison")+
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, size=5)) +
+  scale_y_continuous(name="Home Values (in $)", labels = scales::comma) 
+  
+  
+
+
+  
+```
+
+a. Based on your analysis, which city’s housing is most affordable?
+
+Houston
+
+   Least affordable?
+
+New York
+
+b. Which cities saw the largest change in prices over the past 5 years?
+
+New York
+
+   Which city has remained more consistent (i.e., no huge swings up or down in home values)?
+   
+Houston  
+   
+c. During the market downturn in 2012, which cities were most impacted?
+
+Denver, New York
+
+   Which cities have recovered?
+   
+Denver, New York
+   
+   

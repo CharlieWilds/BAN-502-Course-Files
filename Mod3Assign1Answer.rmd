@@ -1,0 +1,63 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 3 - Assignment 1
+
+## Wilds, Charles
+
+### Data Visualization
+
+In this assignment we will be using two data sets. The first contains candy rankings and the second candy production. Both of these data sets can be found on the UNCW Canvas website. 
+
+```{r}
+library(tidyverse)
+candy_data <- read_csv("candy_data.csv")
+candy_production <- read_csv("candy_production.csv")
+```
+
+#### **Visualization with Scatterplots (geom_point)**
+
+```{r}
+ggplot(data=candy_data, aes(x=sugarpercent,y=pricepercent, label= competitorname)) +
+  geom_point()+
+  geom_smooth(method = "lm") +
+  geom_text(check_overlap = T,
+            vjust = "bottom", 
+            nudge_y = 0.01,
+            angle = 30,
+            size = 2)+
+  labs(title = "Sugar by Price Scatterplot",
+            x = "Sugar content (percentile)",
+            y = "Price (percentile)")
+    
+```
+I was a little confused by the question. The candy that appears to me to have the most sugar at the lowest price are the *Original Skittles*, and the most expensive candy with the highest sugar content would be *Milky Way Simply Caramel*.
+
+#### **Line Chart of Candy Production**
+
+We are using the candy_production data set to compare the the candy production of a specific month and date to the candy production in 2012.
+
+```{r}
+
+ggplot(data=candy_production) +
+  geom_line(mapping=aes(x=observation_date, y= IPG3113N)) +
+  geom_smooth(mapping=aes(x=observation_date, y= IPG3113N)) +
+  labs(y="As percent of 2012 production", x="Year", title="Monthly Candy Production")
+
+```
+#### **Bar Chart of Ingredients**
+
+```{r}
+
+ggplot(data=candy_data, aes(chocolate)) +
+  geom_bar()
+
+candyFeatures <- candy_data %>% select(2:10)
+candyFeatures[] <- lapply(candyFeatures, as.logical)
+
+ggplot(data=candyFeatures, aes(chocolate)) +
+  geom_bar()
+```
+

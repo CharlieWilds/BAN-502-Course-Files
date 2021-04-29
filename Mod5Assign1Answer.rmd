@@ -1,0 +1,116 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 5 - Assignment 1
+## Wilds, Charles
+### Data Wrangling
+
+```{r}
+library(tidyverse)
+library(readxl)
+UN_migrant <- read_excel("UN_migrant.xlsx", 
+    sheet = "Table 6", col_types = c("numeric", 
+        "text", "text", "numeric", "text", 
+        "numeric", "numeric", "numeric", 
+        "numeric", "numeric", "numeric", 
+        "text", "text", "text", "text", "numeric", 
+        "numeric", "text", "text", "text", 
+        "text", "text"), skip = 15)
+```
+
+### Part 2 – Cleaning Data with dplyr
+
+```{r}
+UN_migrant <- rename(UN_migrant, Country = ...2)
+UN_migrant <- rename(UN_migrant, Country_Code = ...4)
+UN_migrant <- rename(UN_migrant, Type = ...5)
+UN_migrant <- rename(UN_migrant, "1990" = "1990...6")
+UN_migrant <- rename(UN_migrant, "1995" = "1995...7")
+UN_migrant <- rename(UN_migrant, "2000" = "2000...8")
+UN_migrant <- rename(UN_migrant, "2005" = "2005...9")
+UN_migrant <- rename(UN_migrant, "2010" = "2010...10")
+UN_migrant <- rename(UN_migrant, "2015" = "2015...11")
+```
+
+```{r}
+Migration <- select(UN_migrant, Country, Country_Code, Type, "1990", "1995", "2000", "2005", "2010", "2015")
+```
+
+### Part 3 – Creating tidy data using tidyr
+
+```{r}
+Migration2 = pivot_longer(Migration,c('1990','1995','2000','2005','2010','2015'),names_to = 'Year',values_to = 'Cases')
+head(Migration2,n=6)
+```
+
+```{r}
+Migration2$Year <- as.integer(Migration2$Year)
+head(Migration2,n=6)
+```
+
+### Part 4 – Research Questions
+
+```{r}
+library(readr)
+
+RegionalMigration <- select(Migration2, Country, Country_Code, Type, Year, Cases)
+RegionalMigration <- filter(RegionalMigration,Country %in% c("Africa","Asia","Europe","Oceania","Northern America","South America"))
+
+Americas <- select(Migration2, Country, Country_Code, Type, Year, Cases)
+Americas <- filter(Americas,Country %in% c("Central America","South America","Northern America"))
+```
+
+### Worldwide Migration based on Regions
+
+a. Which region in the world had the highest number of migrants in the year 2005? 
+Asia
+b. Over the years, which region consistently has the most migrants every 5 year span? 
+Asia  
+Which has the second most?  
+Africa
+c. What region has seen the fewest migrants over the years?
+Oceania
+d. Which plot was most useful in answering these questions and why?
+The first graph was the most useful because you could see a clear difference in the points on the graph. Both graphs  were a little tight towards the lower totals but the first graph was still more helpful.
+
+```{r}
+ggplot(data=RegionalMigration, aes(x=Year,y=Cases, color=Country)) +
+  geom_point() +
+  labs(y="Migrants", x="Year", title="Worldwide Migration")
+
+```
+
+```{r}
+
+ggplot(data=RegionalMigration, aes(x=Year,y=Cases, fill=Country)) +
+  geom_col() +
+  labs(y="Migrants", x="Year", title="Worldwide Migration")
+```
+
+###  Americas Migration by Region
+
+a. In 1990, which region had the largest number of migrants for the Americas?
+Central America
+b. Has this region continued to grow since 1990?
+No
+c. What trends do you notice happening in the Americas over the years?
+Central America and Northern America have gone down, South America has had a slight increase starting in 2010
+d. Specifically, has Northern America increased or decreased over the years?
+Decreased
+e. Which plot was most useful in answering these questions and why?
+Plot 1 for the same reasons as the previous group of questions
+
+```{r}
+ggplot(data=Americas, aes(x=Year,y=Cases, color=Country)) +
+  geom_point() +
+  labs(y="Migrants", x="Year", title="Americas Migration")
+```
+
+```{r}
+ggplot(data=Americas, aes(x=Year,y=Cases, fill=Country)) +
+  geom_col() +
+  labs(y="Migrants", x="Year", title="Americas Migration")
+```
+

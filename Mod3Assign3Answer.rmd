@@ -1,0 +1,76 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 3 - Assignment 3
+## Wilds, Charles
+### More Practice with Plots
+
+```{r}
+library(tidyverse)
+GOOG <- read_csv("GOOG.csv", col_types = cols(Date = col_date(format = "%Y-%m-%d")))
+```
+
+#### Google Stock Price Plots
+
+The following is an analysis of Google’s stock price from October of 2019 to October of 2020. This will
+include a scatter, line, bar, histogram and boxplot. All the plots represent the closing price on the dates listed on the x-axis.
+
+```{r}
+
+ggplot(data=GOOG, aes(x=Date,y=Close)) +
+  geom_point()
+
+ggplot(data=GOOG) +
+  geom_line(mapping=aes(x=Date, y=Close))
+
+ggplot(data=GOOG) +
+  geom_col(mapping=aes(x=Date, y=Close))
+
+ggplot(data=GOOG) +
+  geom_histogram(mapping=aes(x=Close))
+
+ggplot(data=GOOG) +
+  geom_boxplot(mapping=aes(x=Close))
+
+ggplot(data=GOOG, aes(x = Date, y = Close)) +
+  geom_line() +
+  geom_point()
+
+```
+
+You have created many different plots of the same data but some are more helpful than others. Based on
+the plots you created, which one do you find most useful and why?
+I feel the first line graph we plotted (without the points) is the most helpful. The line gives a great illustration of the increase and decrease in the Y variable, and I feel the points do not help much with this number of observations. If you are trying to find trends, the first line graph is the most helpful. 
+#### Google Stock Daily Price Comparisons
+
+```{r Advanced Plots}
+ggplot(GOOG) +
+  geom_line(aes(x=Date, y= High, color= "High")) +
+  geom_line(aes(x=Date, y= Low, color= "Low"))
+
+ggplot(GOOG) +
+  geom_line(aes(x=Date, y= Open, color= "Open")) +
+  geom_line(aes(x=Date, y= Close, color= "Close"))
+
+ggplot(GOOG, aes(x=Date, y=Close)) +
+  geom_area(color="black", fill="blue", alpha=.2)
+
+ggplot(GOOG, aes(x=Date, y=Close)) +
+  geom_area(color="blue", fill="green", alpha=.1)
+
+MAYPRICE <- subset(GOOG, Date > "2020-04-30" & Date < "2020-06-01")
+
+ggplot(MAYPRICE, aes(x=Date,y=Close)) +
+  geom_point() +
+  geom_text(aes(label= round(Close)), size=3, vjust=-1)
+
+APRILPRICE <- subset(GOOG, Date > "2020-03-31" & Date < "2020-05-01")
+
+ggplot(APRILPRICE, aes(x=Date,y=Close)) +
+  geom_point() +
+  geom_text(aes(label= round(Close)), size=2, vjust=1)
+  
+```
+

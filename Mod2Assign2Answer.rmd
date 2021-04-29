@@ -1,0 +1,34 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 2 Assignment 2
+
+## Wilds, Charles
+
+### Introduction to R Markdown
+
+This is my first R Markdown document. It will discuss some of the previous topics in this course. These topics will include atomic vectors, data frames and data types.
+
+This markdown document will review the sales over the past 6 months by constructing a basic plot.
+
+```{r Plot of Sales by Month}
+library(tidyverse)
+sales <- c(50, 150, 200, 100, 300, 250)
+sales
+
+month <- c(1,2,3,4,5,6)
+month
+
+qplot(month,sales)
+```
+Month 5 had the highest sales amount which was 300.
+
+```{r Working with Data Frames}
+Yearly_Sales <- data.frame(month=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),
+                           sales=c(150.25, 258.54, 268.55, 122.52,
+                                   987, 458.82, 667.23, 845.54, 586.78, 888.58, 756.12, 456.84))
+qplot(Yearly_Sales$sales,Yearly_Sales$month)
+```
+May was our highest sales month and April was our lowest.

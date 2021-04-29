@@ -1,0 +1,48 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+# Module 3 - Assignment 2
+## Wilds, Charles
+### Exploratory Data Analysis
+
+```{r}
+library(tidyverse)
+```
+
+#### Diamond Color and Price
+
+```{r}
+ggplot(data=diamonds, aes(x=carat,y=price)) +
+  geom_point()
+```
+1.) What do you notice from the scatterplot as the carat size increases?
+The number of observations decrease dramatically.
+2.) From the scatterplot, what carats are most represented within the diamonds dataset?
+Between 1 and 2.
+
+```{r}
+ggplot(data=diamonds, aes(x=color,y=price)) +
+  geom_point()
+```
+This scatter plot is useless, there is no difference between any of the colors. Also, the reader would not even be able to identify what types of colors are even being examined.
+
+```{r}
+ggplot(data=diamonds, aes(x=carat,y=price, color=color)) +
+  geom_point()
+```
+1.) Does color impact the price?
+There seems to be a slight correlation between the quality of color (D (best) to J (worst)) and the price of the diamond. As the color quality gets better, the diamond becomes more expensive.
+2.) Are certain colors associated with carat size? Provide an example.
+The "D" color is heavily represented from the 0 to 2 carat range. When the diamond exceeds 2 carats the color seems to drop in quality.
+
+```{r}
+dsample <- diamonds[sample(nrow(diamonds), 100), ]
+
+ggplot(data=dsample, aes(x=carat,y=price, color=color)) +
+  geom_point() +
+  geom_smooth()
+```
+
+It again seems that the diamonds with the highest quality in color are represented the most between the lower carat range (0 to 1.25). The "E" color variable seems to have an almost linear correlation between carat and price, and the lowest color variable is consistently the lowest in price as well. It also seems that the highest quantity of observations are in the 1 to 1.25 carat range.
